@@ -113,11 +113,16 @@ async function getObjectInfo(response) {
   return null;
 }
 
-async function getObjectAction(lfsUrl, objectInfo) {
+async function getObjectAction(lfsUrl, objectInfo, env) {
   const url = extendPath(lfsUrl, "objects/batch");
 
   const headers = { "Accept": MIME, "Content-Type": MIME };
-  if (url.username !== "" || url.password !== "") {
+  
+  // Check for environment variable token first
+  if (env && env.GITHUB_TOKEN) {
+    const encoded = btoa(`:${env.GITHUB_TOKEN}`);
+    headers["Authorization"] = `Basic ${encoded}`;
+  } else if (url.username !== "" || url.password !== "") {
     const encoded = btoa(`${url.username}:${url.password}`);
     headers["Authorization"] = `Basic ${encoded}`;
     url.username = url.password = "";
@@ -182,9 +187,13 @@ async function getObjectFromBucket(context, bucket, bucketUrl, path, request) {
   return objectResponse;
 }
 
-async function getObjectFromLFS(objectInfo, request) {
+async function getObjectFromLFS(objectInfo, request, env) {
   const lfsUrl = getLfsUrl(LFS_CONFIG);
-  const action = await getObjectAction(lfsUrl, objectInfo);
+  const action = await getObjectAction(lfsUrl, objectInfo, env);
+
+  if (!action) {
+    return new Response("LFS object not found or access denied", { status: 404 });
+  }
 
   return await fetch(action.href, {
     method: request.method,
@@ -225,7 +234,7 @@ export async function onRequest(context) {
         ? await getObjectFromBucket(
           context, env.LFS_BUCKET, env.LFS_BUCKET_URL, objectInfo.oid, request,
         )
-        : await getObjectFromLFS(objectInfo, request);
+        : await getObjectFromLFS(objectInfo, request, env);
 
       // TODO: copy more headers from source `response`? rn just Cache-Control
       const keepHeaders = (env.KEEP_HEADERS || KEEP_HEADERS).split(",");
