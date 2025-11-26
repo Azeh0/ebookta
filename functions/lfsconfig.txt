@@ -1,2 +1,3 @@
 [lfs]
     fetchexclude = *
+    url = https://github.com/Azeh0/ebookta.git/info/lfs
