@@ -203,7 +203,7 @@ async function getObjectFromLFS(objectInfo, request, env) {
       ...Object.fromEntries(action.header),
       ...Object.fromEntries(request.headers),
     },
-    cf: { cacheTtl: 31536000 },
+    cf: { cacheTtl: 0 }, // Disable caching to prevent sticking to 404s
   });
 }
 
