@@ -133,8 +133,18 @@ async function getObjectAction(lfsUrl, objectInfo) {
 
   const response = await fetch(url, { method: "POST", headers, body });
 
-  // TODO: better error handling
-  if (response.ok && response.headers.get("Content-Type").startsWith(MIME)) {
+  if (!response.ok) {
+    console.error(`LFS Batch API failed: ${response.status} ${response.statusText}`);
+    try {
+      const text = await response.text();
+      console.error(`Response body: ${text}`);
+    } catch (e) {
+      console.error("Could not read error response body");
+    }
+    return null;
+  }
+
+  if (response.headers.get("Content-Type").startsWith(MIME)) {
     const batch = await response.json();
     if ((batch.transfer === undefined || batch.transfer === "basic")
       && batch.objects[0] && batch.objects[0].authenticated === true) {
