@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumina Audiobooks</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- ONNX Runtime - loaded before app.js module -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Merriweather', 'serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            200: '#a7f3d0',
+                            300: '#6ee7b7',
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
+
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
+        <div class="container mx-auto px-4 h-16 flex items-center justify-between max-w-5xl">
+            <div class="flex items-center gap-2">
+                <div class="bg-brand-600 text-white p-1.5 rounded-lg">
+                    <i data-lucide="book-open" class="w-5 h-5"></i>
+                </div>
+                <span class="font-serif font-bold text-xl tracking-tight text-slate-800">Lumina<span class="text-brand-600">Audiobooks</span></span>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="#" class="text-sm font-medium text-slate-500 hover:text-brand-600 transition-colors">Library</a>
+                <button id="settings-btn" class="text-sm font-medium text-slate-500 hover:text-brand-600 transition-colors">Settings</button>
+                <div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-xs">
+                    JD
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-[100] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"></div>
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+                    <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-brand-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <i data-lucide="settings" class="w-6 h-6 text-brand-600"></i>
+                            </div>
+                            <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
+                                <h3 class="text-lg font-serif font-bold leading-6 text-slate-900" id="modal-title">Supertonic Settings</h3>
+                                <div class="mt-4 space-y-4">
+                                    
+                                    <!-- Voice Selection -->
+                                    <div>
+                                        <label for="voice-select" class="block text-sm font-medium leading-6 text-slate-900">Voice</label>
+                                        <div class="mt-1">
+                                            <select id="voice-select" class="block w-full rounded-md border-0 py-2 pl-3 pr-10 text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-600 sm:text-sm sm:leading-6">
+                                                <option value="M1">Male 1 (M1)</option>
+                                                <option value="M2">Male 2 (M2)</option>
+                                                <option value="F1">Female 1 (F1)</option>
+                                                <option value="F2">Female 2 (F2)</option>
+                                            </select>
+                                        </div>
+                                        <p class="mt-1 text-xs text-slate-500">Select the narrator voice style.</p>
+                                    </div>
+
+                                    <!-- Inference Steps -->
+                                    <div>
+                                        <label for="inference-steps" class="block text-sm font-medium leading-6 text-slate-900">Inference Steps</label>
+                                        <div class="mt-1">
+                                            <input type="range" id="inference-steps" min="2" max="10" value="10" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600">
+                                            <div class="flex justify-between text-xs text-slate-500 mt-1">
+                                                <span>Fast (2)</span>
+                                                <span id="inference-steps-value" class="font-medium text-brand-600">10</span>
+                                                <span>Quality (10)</span>
+                                            </div>
+                                        </div>
+                                        <p class="mt-1 text-xs text-slate-500">More steps = better quality but slower.</p>
+                                    </div>
+
+                                    <!-- Speed -->
+                                    <div>
+                                        <label for="speed" class="block text-sm font-medium leading-6 text-slate-900">Speech Speed</label>
+                                        <div class="mt-1">
+                                            <input type="range" id="speed" min="0.5" max="2.0" step="0.05" value="1.0" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600">
+                                            <div class="flex justify-between text-xs text-slate-500 mt-1">
+                                                <span>Slow (0.5x)</span>
+                                                <span id="speed-value" class="font-medium text-brand-600">1.0x</span>
+                                                <span>Fast (2.0x)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Silence Duration -->
+                                    <div>
+                                        <label for="silence-duration" class="block text-sm font-medium leading-6 text-slate-900">Pause Between Sentences (seconds)</label>
+                                        <div class="mt-1">
+                                            <input type="range" id="silence-duration" min="0" max="1.0" step="0.1" value="0.3" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600">
+                                            <div class="flex justify-between text-xs text-slate-500 mt-1">
+                                                <span>None (0s)</span>
+                                                <span id="silence-value" class="font-medium text-brand-600">0.3s</span>
+                                                <span>Long (1s)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <hr class="my-4 border-slate-200">
+
+                                    <!-- Execution Provider -->
+                                    <div>
+                                        <label for="execution-provider" class="block text-sm font-medium leading-6 text-slate-900">Execution Provider</label>
+                                        <div class="mt-1">
+                                            <select id="execution-provider" class="block w-full rounded-md border-0 py-2 pl-3 pr-10 text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-600 sm:text-sm sm:leading-6">
+                                                <option value="wasm">CPU (WASM)</option>
+                                                <option value="webgpu">GPU (WebGPU)</option>
+                                            </select>
+                                        </div>
+                                        <p class="mt-1 text-xs text-slate-500">WebGPU is faster but requires a compatible browser and GPU.</p>
+                                    </div>
+
+                                    <!-- Threads (WASM only) -->
+                                    <div id="threads-container">
+                                        <label for="num-threads" class="block text-sm font-medium leading-6 text-slate-900">CPU Threads</label>
+                                        <div class="mt-1">
+                                            <input type="number" id="num-threads" min="1" max="16" value="4" class="block w-full rounded-md border-0 py-1.5 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-brand-600 sm:text-sm sm:leading-6">
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                        <button type="button" id="save-settings-btn" class="inline-flex w-full justify-center rounded-md bg-brand-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-500 sm:ml-3 sm:w-auto">Save Settings</button>
+                        <button type="button" id="close-settings-btn" class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 sm:mt-0 sm:w-auto">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="flex-grow container mx-auto px-4 py-8 md:py-12 max-w-5xl">
+        
+        <!-- Hero Section -->
+        <div id="hero-section" class="text-center mb-10 space-y-3 transition-all duration-500">
+            <h2 class="text-4xl md:text-5xl font-serif font-bold text-slate-900 tracking-tight">
+                Turn your EPUBs into Audiobooks.
+            </h2>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                Professional AI narration for your ebook library.
+            </p>
+        </div>
+
+        <!-- Error Notification -->
+        <div id="error-container" class="hidden mb-6">
+            <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2 animate-pulse">
+                <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                <span id="error-message" class="font-medium">Error message here</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="space-y-8">
+
+            <!-- Input Area -->
+            <div id="input-area" class="relative transition-all duration-500">
+                
+                <!-- Drag & Drop Zone (Visible when no text) -->
+                <div id="drop-zone" class="relative h-80 rounded-2xl border-2 border-dashed border-slate-300 bg-white hover:border-brand-400 hover:bg-slate-50 transition-all duration-300 flex flex-col items-center justify-center gap-4 cursor-pointer group">
+                    <div class="p-4 bg-brand-100 rounded-full group-hover:scale-110 transition-transform duration-300">
+                        <i data-lucide="upload-cloud" class="w-10 h-10 text-brand-600"></i>
+                    </div>
+                    <div class="text-center space-y-1">
+                        <p class="text-xl font-serif font-bold text-slate-700">Click to upload or drag and drop</p>
+                        <p class="text-slate-500">Supports EPUB (.epub) and Text (.txt) files</p>
+                    </div>
+                    <button id="choose-file-btn" type="button" class="px-6 py-2 bg-slate-900 text-white rounded-lg font-medium hover:bg-brand-600 transition-colors shadow-lg shadow-slate-200/50">
+                        Choose File
+                    </button>
+                    <input type="file" id="file-input" class="hidden" accept=".epub,.txt">
+                </div>
+
+                <!-- Text Editor (Visible when text loaded) -->
+                <div id="editor-zone" class="hidden bg-white p-1 rounded-2xl shadow-sm border border-slate-200 focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-brand-500 transition-all relative">
+                    <textarea id="text-input" placeholder="Your book text will appear here..." class="w-full h-96 p-6 rounded-xl resize-y outline-none text-slate-700 placeholder:text-slate-400 font-serif leading-relaxed text-lg bg-transparent"></textarea>
+                    
+                    <button id="clear-text-btn" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Clear text">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                    
+                    <div class="absolute bottom-4 right-4 text-xs font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                        <span id="char-count">0</span> characters
+                    </div>
+
+                    <!-- Loading Overlay -->
+                    <div id="parsing-overlay" class="hidden absolute inset-0 z-10 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center rounded-2xl">
+                        <i data-lucide="loader-2" class="w-10 h-10 text-brand-600 animate-spin mb-3"></i>
+                        <p class="font-medium text-slate-600">Extracting text...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Voice Selector (Removed) -->
+            <!-- 
+            <div id="voice-selector-section" class="space-y-4">
+                ...
+            </div>
+            -->
+
+            <!-- Generate Button -->
+            <div class="flex justify-center pt-4">
+                <button id="generate-btn" class="group relative flex items-center justify-center gap-3 px-8 py-4 rounded-full text-lg font-bold tracking-wide text-white shadow-lg transition-all duration-300 bg-slate-300 cursor-not-allowed" disabled>
+                    <i data-lucide="wand-2" class="w-5 h-5"></i>
+                    <span id="generate-btn-text">Convert to Audiobook</span>
+                </button>
+            </div>
+
+            <!-- Progress Section -->
+            <div id="progress-container" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                    <span id="progress-status" class="text-sm font-medium text-slate-600">Processing...</span>
+                    <span id="progress-percent" class="text-sm font-bold text-brand-600">0%</span>
+                </div>
+                <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="h-full bg-brand-500 transition-all duration-300 ease-out" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Player Section (Hidden initially) -->
+            <div id="player-container" class="hidden bg-white rounded-2xl shadow-xl border border-slate-100 p-6 md:p-8 space-y-6 animate-in zoom-in-95 duration-500">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-2xl font-serif font-bold text-slate-900">Now Playing</h3>
+                        <p class="text-slate-500 text-sm">Generated Audiobook Chapter</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="reset-btn" class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-full transition-colors" title="Create New">
+                            <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                        </button>
+                        <button id="download-btn" class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-full transition-colors" title="Download WAV">
+                            <i data-lucide="download" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Visualizer Canvas -->
+                <div class="relative h-32 bg-slate-50 rounded-xl overflow-hidden flex items-center justify-center">
+                    <canvas id="visualizer-canvas" class="w-full h-full"></canvas>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="space-y-2">
+                    <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden cursor-pointer" id="timeline">
+                        <div id="timeline-progress" class="h-full bg-brand-500 transition-all duration-100 ease-linear w-0"></div>
+                    </div>
+                    <div class="flex justify-between text-xs font-medium text-slate-400 font-mono">
+                        <span id="time-current">0:00</span>
+                        <span id="time-total">0:00</span>
+                    </div>
+                </div>
+
+                <!-- Main Controls -->
+                <div class="flex justify-center items-center gap-8">
+                    <button id="stop-btn" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <i data-lucide="rotate-ccw" class="w-6 h-6"></i>
+                    </button>
+
+                    <button id="play-pause-btn" class="w-16 h-16 flex items-center justify-center bg-brand-600 hover:bg-brand-700 text-white rounded-full shadow-lg shadow-brand-200 transition-all transform hover:scale-105 active:scale-95">
+                        <i data-lucide="play" class="w-8 h-8 ml-1 fill-current"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="py-6 text-center text-slate-400 text-sm">
+        <p>© 2025 Lumina Audiobooks. Powered by Supertonic.</p>
+    </footer>
+
+    <!-- App Logic -->
+    <script>
+        // Initialize Lucide icons first
+        lucide.createIcons();
+        console.log('Lucide icons initialized');
+        console.log('ONNX Runtime available:', typeof ort !== 'undefined');
+    </script>
+    <script type="module" src="app.js" onerror="console.error('Failed to load app.js')"></script>
+</body>
+</html>
