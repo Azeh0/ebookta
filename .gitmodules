@@ -1,3 +1,0 @@
-[submodule "functions/lfs-worker"]
-	path = functions/lfs-worker
-	url = https://github.com/milkey-mouse/git-lfs-client-worker
