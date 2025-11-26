@@ -1,4 +1,4 @@
-import LFS_CONFIG from "./.lfsconfig.txt";
+import LFS_CONFIG from "./lfsconfig.txt";
 
 const VERSION = "version https://git-lfs.github.com/spec/v1\n";
 const MIME = "application/vnd.git-lfs+json";
