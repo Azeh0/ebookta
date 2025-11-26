@@ -151,6 +151,8 @@ async function getObjectAction(lfsUrl, objectInfo, env) {
 
   if (response.headers.get("Content-Type").startsWith(MIME)) {
     const batch = await response.json();
+    console.log(`LFS Batch Response: ${JSON.stringify(batch)}`); // Log the full response
+
     if ((batch.transfer === undefined || batch.transfer === "basic")
       && batch.objects[0] && batch.objects[0].authenticated === true) {
       return batch.objects[0].actions.download;
