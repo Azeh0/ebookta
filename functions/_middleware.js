@@ -149,7 +149,8 @@ async function getObjectAction(lfsUrl, objectInfo, env) {
     return null;
   }
 
-  if (response.headers.get("Content-Type").startsWith(MIME)) {
+  const contentType = response.headers.get("Content-Type");
+  if (contentType && (contentType.startsWith(MIME) || contentType.startsWith("application/json"))) {
     const batch = await response.json();
     console.log(`LFS Batch Response: ${JSON.stringify(batch)}`); // Log the full response
 
