@@ -155,7 +155,7 @@ async function getObjectAction(lfsUrl, objectInfo, env) {
     console.log(`LFS Batch Response: ${JSON.stringify(batch)}`); // Log the full response
 
     if ((batch.transfer === undefined || batch.transfer === "basic")
-      && batch.objects[0] && batch.objects[0].authenticated === true) {
+      && batch.objects[0] && batch.objects[0].actions && batch.objects[0].actions.download) {
       return batch.objects[0].actions.download;
     }
   }
